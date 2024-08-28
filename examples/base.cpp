@@ -15,7 +15,7 @@ USBCDC USBSerial{};
 
 simia::Stick define{.left = 1, .right = 2, .up = 3, .down = 4};
 
-simia::Joystick joystick{define};
+simia::JoystickSerial joystick{define};
 
 void setup() {
   Serial.begin(9600);
