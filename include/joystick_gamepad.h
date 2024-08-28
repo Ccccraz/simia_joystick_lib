@@ -23,7 +23,7 @@ class JoystickGamepad
     // direction map
     // row is X axis
     // column is Y axis
-    const uint8_t _direction_map[3][4] = {{HAT_CENTER, HAT_UP, HAT_DOWN},
+    const uint8_t _direction_map[3][3] = {{HAT_CENTER, HAT_UP, HAT_DOWN},
                                           {HAT_LEFT, HAT_UP_LEFT, HAT_DOWN_LEFT},
                                           {HAT_RIGHT, HAT_UP_RIGHT, HAT_DOWN_RIGHT}};
 
@@ -52,21 +52,21 @@ inline JoystickGamepad::JoystickGamepad(Stick define) : _define{define}
 }
 
 /// @brief start the joystick gamepad task
-/// @return 
+/// @return
 inline auto JoystickGamepad::start() -> void
 {
     this->begin();
     is_running = true;
-
-    // direction index
-    auto row_index = 0;
-    auto column_index = 0;
 
     // previous direction is used to detect changes
     auto _direction_previous = _direction;
 
     while (is_running)
     {
+        // direction index
+        auto row_index = 0;
+        auto column_index = 0;
+
         auto left = digitalRead(_define.left);
         auto right = digitalRead(_define.right);
         auto up = digitalRead(_define.up);
@@ -81,10 +81,6 @@ inline auto JoystickGamepad::start() -> void
         {
             row_index = 2;
         }
-        else
-        {
-            row_index = 0;
-        }
 
         // direction column index
         if (up == LOW)
@@ -95,10 +91,6 @@ inline auto JoystickGamepad::start() -> void
         {
             column_index = 2;
         }
-        else
-        {
-            column_index = 0;
-        }
 
         // direction
         _direction = _direction_map[row_index][column_index];
@@ -106,6 +98,7 @@ inline auto JoystickGamepad::start() -> void
         if (_direction_previous != _direction)
         {
             _gamepad.hat(_direction);
+            _direction_previous = _direction;
         }
 
         // delay shortly
