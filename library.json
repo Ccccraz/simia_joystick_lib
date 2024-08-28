@@ -1,6 +1,6 @@
 {
     "name": "simia_joystick",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "joystick component for simia embedded",
     "keywords": "simia, psychounity",
     "repository": {
@@ -14,7 +14,6 @@
             "url": "https://github.com/Ccccraz"
         }
     ],
-    "license": "LGPL-3.0-or-later",
     "homepage": "https://psychounity.org/",
     "dependencies": {
     },
