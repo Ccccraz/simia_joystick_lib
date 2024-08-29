@@ -4,34 +4,61 @@
 #include <Arduino.h>
 
 #include <USB.h>
-#include <USBHIDGamepad.h>
+#include <USBHID.h>
 
 #include "joystick.h"
 
 namespace simia
 {
-class JoystickGamepad
+
+#define CENTER 0
+#define UP 1
+#define DOWN 2
+#define LEFT 4
+#define UP_LEFT 5
+#define DOWN_LEFT 6
+#define RIGHT 8
+#define UP_RIGHT 9
+#define DOWN_RIGHT 10
+
+char gamepad_report_descriptor[24] = {
+    0x05, 0x01, // USAGE_PAGE (Generic Desktop)
+    0x09, 0x04, // USAGE (Joystick)
+    0xa1, 0x01, // COLLECTION (Application)
+    0xa1, 0x00, //   COLLECTION (Physical)
+    0x05, 0x01, //     USAGE_PAGE (Generic Desktop)
+    0x09, 0x39, //     USAGE (Hat switch)
+    0x15, 0x01, //     LOGICAL_MINIMUM (1)
+    0x25, 0x08, //     LOGICAL_MAXIMUM (10)
+    0x75, 0x08, //     REPORT_SIZE (8)
+    0x95, 0x01, //     REPORT_COUNT (1)
+    0x81, 0x02, //     INPUT (Data,Var,Abs,Null)
+    0xc0,       //   END_COLLECTION
+    0xc0        // END_COLLECTION
+};
+
+class JoystickGamepad : public USBHIDDevice
 {
   private:
     Stick _define{};
-    USBHIDGamepad _gamepad{};
-    bool is_running = false;
+    USBHID _gamepad{};
+    bool is_running{false};
 
     // default direction is center
-    uint8_t _direction{HAT_CENTER};
+    signed char _direction{CENTER};
 
     // direction map
     // row is X axis
     // column is Y axis
-    const uint8_t _direction_map[3][3] = {{HAT_CENTER, HAT_UP, HAT_DOWN},
-                                          {HAT_LEFT, HAT_UP_LEFT, HAT_DOWN_LEFT},
-                                          {HAT_RIGHT, HAT_UP_RIGHT, HAT_DOWN_RIGHT}};
+    const signed char _direction_map[3][3] = {
+        {CENTER, UP, DOWN}, {LEFT, UP_LEFT, DOWN_LEFT}, {RIGHT, UP_RIGHT, DOWN_RIGHT}};
 
     auto begin() -> void;
 
   public:
     JoystickGamepad(Stick define);
     auto start() -> void;
+    auto _onGetDescriptor(uint8_t *buffer) -> uint16_t;
     auto stop() -> void;
     ~JoystickGamepad() = default;
 };
@@ -49,6 +76,13 @@ inline JoystickGamepad::JoystickGamepad(Stick define) : _define{define}
     pinMode(_define.right, INPUT_PULLUP);
     pinMode(_define.up, INPUT_PULLUP);
     pinMode(_define.down, INPUT_PULLUP);
+
+    static bool initialized{false};
+    if (!initialized)
+    {
+        initialized = true;
+        _gamepad.addDevice(this, sizeof(gamepad_report_descriptor));
+    }
 }
 
 /// @brief start the joystick gamepad task
@@ -81,6 +115,10 @@ inline auto JoystickGamepad::start() -> void
         {
             row_index = 2;
         }
+        else
+        {
+            row_index = 0;
+        }
 
         // direction column index
         if (up == LOW)
@@ -91,19 +129,29 @@ inline auto JoystickGamepad::start() -> void
         {
             column_index = 2;
         }
+        else
+        {
+            column_index = 0;
+        }
 
         // direction
         _direction = _direction_map[row_index][column_index];
 
         if (_direction_previous != _direction)
         {
-            _gamepad.hat(_direction);
+            _gamepad.SendReport(0, &_direction, 1);
             _direction_previous = _direction;
         }
 
         // delay shortly
         vTaskDelay(pdMS_TO_TICKS(1));
     }
+}
+
+inline auto JoystickGamepad::_onGetDescriptor(uint8_t *buffer) -> uint16_t
+{
+    memcpy(buffer, gamepad_report_descriptor, sizeof(gamepad_report_descriptor));
+    return sizeof(gamepad_report_descriptor);
 }
 
 inline auto JoystickGamepad::stop() -> void
